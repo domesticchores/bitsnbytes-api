@@ -3,7 +3,7 @@ import api
 
 @pytest.fixture()
 def app():
-    app = create_app()
+    app = api.create_app()
     app.config.update({
         "TESTING": True,
     })
@@ -25,21 +25,22 @@ def runner(app):
     return app.test_cli_runner()
 
 def test_s3():
-    return True
+    assert True
 
-def test_getting_item_by_id():
-    resp = client.get("/items/1234")
-    
-    assert '''{ \
-            "id": 1234,
-            "name": "Original Wavy Potato Chips",
-            "upc": 28400043809,
-            "price": 4.20, \
-            "weight_mean": 28,
-            "weight_std": 1,
-            "color": "red",
-            "shape": "chip_bag",
-            "available": True,
-            "item_thumb": "",
-            "item_img": ""
-        }''' in resp.data
+def test_item_operations(client):
+    resp = client.put("/items")
+    assert resp.status == '200 OK'
+
+    item_id = resp.data
+
+    resp = client.post("/items/{0}".format(item_id))
+    assert resp.status == '200 OK'
+
+    resp = client.get("/items")
+    assert resp.status == '200 OK'
+
+    resp = client.get("/items/{0}".format(item_id))
+    assert resp.status == '200 OK'
+
+    resp = client.delete("/items/{0}".format(item_id))
+    assert resp.status == '200 OK'
