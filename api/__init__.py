@@ -105,6 +105,7 @@ def get_all_items():
             new_item = Item(request.get_json())
             db.session.add(new_item)
             db.session.commit()
+            return str(new_item.id)
         except ValueError as value_err:
             return str(value_err), 400
 
@@ -129,7 +130,7 @@ def get_item_by_id(id):
     if request.method == "PUT":
         pass
     else:
-        return str(item.as_dict())
+        return json.dumps(item.as_dict())
 
 """
 Edit item by ID
