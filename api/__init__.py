@@ -86,22 +86,32 @@ def auth(f):
 """
 Get all items
 """
-@app.route('/items', methods=["GET"])
+@app.route('/items', methods=["GET", "POST"])
 @auth
 def get_all_items():
     """
     Returns all items as a json obj
     """
     
-    query = db.session.query(Item)
-    items = query.all()
+    if request.method == "GET":
+        query = db.session.query(Item)
+        items = query.all()
 
-    return [item.as_dict() for item in items]
+        return [item.as_dict() for item in items]
+    
+    else:
+        try:
+            print(request.get_json())
+            new_item = Item(request.get_json())
+            db.session.add(new_item)
+            db.session.commit()
+        except ValueError as value_err:
+            return str(value_err), 400
 
 """
 Get Item by ID
 """
-@app.route('/items/<id>', methods=["GET"])
+@app.route('/items/<id>', methods=["GET", "POST"])
 @auth
 def get_item_by_id(id):
     """
@@ -115,7 +125,11 @@ def get_item_by_id(id):
     ```"""
 
     item = db.get_or_404(Item, id)
-    return str(item.as_dict())
+
+    if request.method == "PUT":
+        pass
+    else:
+        return str(item.as_dict())
 
 """
 Edit item by ID
@@ -124,6 +138,10 @@ Edit item by ID
 @auth
 def edit_item(id):
     item = db.get_or_404(Item, id)
+
+    print(item.id)
+
+    return ""
 
     if(item_exists(id)):
         db.edit_item(id, request.form)
