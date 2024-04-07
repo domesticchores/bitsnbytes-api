@@ -1,24 +1,18 @@
 import pytest
-import api
+from api import app
 
 @pytest.fixture()
 def app():
-    app = api.create_app()
+    app.run(host=app.config['IP'], port=int(app.config['PORT']))
     app.config.update({
         "TESTING": True,
     })
 
-    # other setup can go here
-
     yield app
-
-    # clean up / reset resources here
-
 
 @pytest.fixture()
 def client(app):
     return app.test_client()
-
 
 @pytest.fixture()
 def runner(app):

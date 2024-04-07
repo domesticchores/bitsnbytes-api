@@ -2,34 +2,30 @@ import hashlib
 import api.s3
 import api.img
 import json
-from PIL import Image
+from sqlalchemy import Column, Integer, String, Float, Boolean
+from sqlalchemy.ext.declarative import declarative_base
 
-class Item:
-    def __init__(self, id, name, upc, price, weight_mean, weight_std, color, shape, available):
-        self.id = id
-        self.name = name
-        self.upc = upc
-        self.price = price
-        self.weight_mean = weight_mean
-        self.weight_std = weight_std
-        self.color = color
-        self.shape = shape
-        self.available = available
+Base = declarative_base()
 
-    def to_json(self):
-        return json.dumps({
-            "id": self.id,
-            "name": self.name,
-            "upc": self.upc,
-            "price": self.price,
-            "weight_mean": self.weight_mean,
-            "weight_std": self.weight_std,
-            "color": self.color,
-            "shape": self.shape,
-            "available": self.available,
-            "item_thumb": '',
-            "item_img": ''
-        })
+class Item(Base):
+    __tablename__ = 'items'  # Name of the database table
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String, default='Untitled')
+    thumb_img = Column(String, default='http://placehold.jp/150x150.png')
+    weight_avg = Column(Float, default=0.0)
+    weight_std = Column(Float, default=0.0)
+    vision_class = Column(String)
+    upc = Column(String, default='0000000000')
+    quantity = Column(Integer, default=0)
+    price = Column(Float, default=0.0)
+    
+    def __init__(self):
+
+        api.db.add(self)
+
+    def as_dict(self):
+       return {c.name: getattr(self, c.name) for c in self.__table__.columns}
 
     def add_image(file):
         """

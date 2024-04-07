@@ -11,4 +11,11 @@ DBPWD =  os.getenv("DBPWD", default="")
 DBHOST = os.getenv("DBHOST", default="postgres.csh.rit.edu")
 DBPORT = os.getenv("DBPORT", default="5432")
 
+UI_KEY = os.getenv("UI_KEY", default="")
+AI_KEY = os.getenv("AI_KEY", default="")
+EXTRA_KEY = os.getenv("EXTRA_KEY", default="")
+
+IP = os.getenv("IP", default="")
+PORT = os.getenv("PORT", default="")
+
 DEBUG = os.getenv("DEBUG", default=False)
