@@ -6,6 +6,7 @@ import api.util
 import api.s3
 from functools import wraps
 from api.models.item import Item
+from api.models.user import User
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from sqlalchemy import select
@@ -83,6 +84,9 @@ def auth(f):
 # 
 ########################
 
+# Items
+########################
+
 """
 Get all items
 """
@@ -101,7 +105,6 @@ def get_all_items():
     
     else:
         try:
-            print(request.get_json())
             new_item = Item(request.get_json())
             db.session.add(new_item)
             db.session.commit()
@@ -112,7 +115,7 @@ def get_all_items():
 """
 Get Item by ID
 """
-@app.route('/items/<id>', methods=["GET", "POST"])
+@app.route('/items/<id>', methods=["GET", "PUT"])
 @auth
 def get_item_by_id(id):
     """
@@ -127,39 +130,13 @@ def get_item_by_id(id):
 
     item = db.get_or_404(Item, id)
 
-    if request.method == "PUT":
-        pass
+    if request.method == "PUT":    
+        for field, value in request.form_data.items():
+            if hasattr(item, field) and getattr(item, field) != value:
+                setattr(item, field, value)
+        db.session.commit()
     else:
         return json.dumps(item.as_dict())
-
-"""
-Edit item by ID
-"""
-@app.route('/items/<id>', methods=["POST"])
-@auth
-def edit_item(id):
-    item = db.get_or_404(Item, id)
-
-    print(item.id)
-
-    return ""
-
-    if(item_exists(id)):
-        db.edit_item(id, request.form)
-        return get_item_by_id(id)
-    else:
-        return flask.redirect('/404')
-
-"""
-Add item, return ID
-"""
-@app.route('/items', methods=["PUT"])
-@auth
-def add_item():
-
-    item = Item()
-
-    return '{}'.format(item.id)
     
 """
 Deletes item object with given ID
@@ -167,17 +144,88 @@ Deletes item object with given ID
 @app.route('/items/<id>', methods=["DELETE"])
 @auth
 def delete_item(id):
+    item = db.get_or_404(Item, id)
+    db.session.delete(item)
+    db.session.commit()
 
-    return util.format_return_msg("Item {0} Deleted".format(id))
+    return ""
 
-@app.route('/users/<id>', methods=["GET"])
+# Users
+########################
+
+"""
+Get all users
+"""
+@app.route('/users/', methods=["GET", "POST"])
+@auth
+def get_all_users():
+    """
+    Returns all users as a json obj
+    """
+    
+    if request.method == "GET":
+        query = db.session.query(User)
+        users = query.all()
+
+        return [user.as_dict() for user in users]
+    
+    else:
+        try:
+            new_user = User(request.get_json())
+            db.session.add(new_user)
+            db.session.commit()
+            return str(new_user.id)
+        except ValueError as value_err:
+            return str(value_err), 400
+
+"""
+Get User by Token
+"""
+@app.route('/token/<token>', methods=["GET"])
+@auth
+def get_user_by_token(token):
+    query = db.session.query(User).filter(User.token == token)
+    if query.count() == 0:
+        abort(404)
+
+    user = query.one()
+
+    return json.dumps(user.as_dict())
+
+"""
+Get User by ID
+"""
+@app.route('/users/<int:id>', methods=["GET", "PUT"])
 @auth
 def get_user_by_id(id):
-    return """
-        {
-            'id': 1234,
-            'rit_id': 12345678,
-            'csh_id': 'jeffm',
-            'name': 'Jeff Mahoney'
-            'confidence': 0.98
-        }"""
+    """
+    Returns User Object by ID
+    ```
+    parameters:
+    - name: id
+        in: path
+        type: int
+        required: true
+    ```"""
+
+    user = db.get_or_404(User, id)
+
+    if request.method == "PUT":    
+        for field, value in request.form_data.users():
+            if hasattr(user, field) and getattr(user, field) != value:
+                setattr(user, field, value)
+        db.session.commit()
+    else:
+        return json.dumps(user.as_dict())
+    
+"""
+Deletes user object with given ID
+"""
+@app.route('/users/<id>', methods=["DELETE"])
+@auth
+def delete_user(id):
+    user = db.get_or_404(User, id)
+    db.session.delete(user)
+    db.session.commit()
+
+    return ""
