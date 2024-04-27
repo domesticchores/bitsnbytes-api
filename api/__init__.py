@@ -171,7 +171,7 @@ def get_all_users():
     
     else:
         try:
-            new_user = User(request.get_json())
+            new_user = User(request.get_json(force=True))
             db.session.add(new_user)
             db.session.commit()
             return str(new_user.id)

@@ -19,9 +19,6 @@ class User(Base):
         self.name = form_data['name']
         if len(self.name) == 0:
             self.name = 'Untitled'
-        self.thumb_img = form_data['thumb_img']
-        if len(self.thumb_img) == 0:
-            self.thumb_img = 'http://placehold.jp/150x150.png'
         self.balance = form_data['balance']
         if self.balance is None:
             self.balance = 0
@@ -29,8 +26,6 @@ class User(Base):
         if self.payment_type not in ['credit', 'dining', 'imagine']:
             self.payment_type = "credit"
         self.token = form_data['token']
-        if len(self.token) == 0:
-            raise ValueError("Missing Token")
         self.email = form_data['email']
         if len(self.email) == 0:
             self.email = ""
