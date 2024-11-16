@@ -11,6 +11,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from sqlalchemy import select
 from sqlalchemy.orm import Session
+import json
 #from flasgger import Swagger
 
 #swagger = Swagger(app)
@@ -171,7 +172,9 @@ def get_all_users():
     
     else:
         try:
-            new_user = User(request.get_json(force=True))
+            json_data = json.loads(request.get_json(force=True))
+            new_user = User(json_data)
+            print(f"JSON DATA: {json_data}")
             db.session.add(new_user)
             db.session.commit()
             return str(new_user.id)
