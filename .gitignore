@@ -4,4 +4,6 @@ config.py
 config.prod.py
 config.dev.py
 .venv
-.env
+
+# windows testing
+env.bat
