@@ -3,3 +3,5 @@ venv/*
 config.py
 config.prod.py
 config.dev.py
+.venv
+.env
