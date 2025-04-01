@@ -11,7 +11,7 @@ class Item(Base):
     __tablename__ = 'items'  # Name of the database table
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    name = Column(String, default='Untitled')
+    name = Column(String, default='Untitled Item')
     thumb_img = Column(String, default='http://placehold.jp/150x150.png')
     weight_avg = Column(Float, default=0.0)
     weight_std = Column(Float, default=0.0)

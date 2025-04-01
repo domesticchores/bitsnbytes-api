@@ -73,6 +73,9 @@ def auth(f):
             if request.headers["Authorization"] == f'{app.config["AI_KEY"]}':
                 print("Authorized with AI credential")
                 return f(**kwargs)
+            if request.headers["Authorization"] == f'{app.config["WEB_KEY"]}':
+                print("Authorized with WEB credential")
+                return f(**kwargs)
             if request.headers["Authorization"] == f'{app.config["EXTRA_KEY"]}':
                 print("Authorized with EXTRA credential")
                 return f(**kwargs)
