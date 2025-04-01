@@ -168,20 +168,23 @@ def get_all_users():
     """
     
     if request.method == "GET":
+        print("GET Recieved")
         query = db.session.query(User)
         users = query.all()
 
         return [user.as_dict() for user in users]
     
     else:
-        print("Recieved POST Request")
+        print("POST Recieved")
+        print(request.form)
         try:
-            user_data = request.args.to_dict()
-            new_user = User(user_data)
-            print(f"INPUTTED DATA: {user_data}")
+            # json_data = json.loads(request.get_json(force=True))
+            form_data = request.form.to_dict()
+            new_user = User(form_data)
+            print(f"DATA: {form_data}")
             db.session.add(new_user)
             db.session.commit()
-            print(f"POST SUCCESS: UID {new_user.id} CREATED")
+            print(f"POST SUCCESS: UID {new_user.id}")
             return str(new_user.id)
         except ValueError as value_err:
             print(f"VALUE ERROR: {value_err}")
@@ -238,37 +241,3 @@ def delete_user(id):
     db.session.commit()
 
     return ""
-
-# NFC
-########################
-
-"""
-Get all users
-"""
-@app.route('/nfc/', methods=["POST"])
-@auth
-def add_nfc_user():
-    """
-    Returns all users as a json obj
-    """
-    
-    if request.method == "GET":
-        print("GET not POST")
-        query = db.session.query(User)
-        users = query.all()
-
-        return [user.as_dict() for user in users]
-    
-    else:
-        print("POST not GET")
-        try:
-            user_data = request.args.to_dict()
-            new_user = User(user_data)
-            print(f"INPUTTED DATA: {user_data}")
-            db.session.add(new_user)
-            db.session.commit()
-            print(f"POST SUCCESS: {new_user.id}")
-            return str(new_user.id)
-        except ValueError as value_err:
-            print(f"VALUE ERROR: {value_err}")
-            return str(value_err), 400
