@@ -168,20 +168,24 @@ def get_all_users():
     """
     
     if request.method == "GET":
+        print("GET not POST")
         query = db.session.query(User)
         users = query.all()
 
         return [user.as_dict() for user in users]
     
     else:
+        print("POST not GET")
         try:
-            json_data = json.loads(request.get_json(force=True))
-            new_user = User(json_data)
-            print(f"JSON DATA: {json_data}")
+            user_data = request.args.to_dict()
+            new_user = User(user_data)
+            print(f"INPUTTED DATA: {user_data}")
             db.session.add(new_user)
             db.session.commit()
+            print(f"POST SUCCESS: {new_user.id}")
             return str(new_user.id)
         except ValueError as value_err:
+            print(f"VALUE ERROR: {value_err}")
             return str(value_err), 400
 
 """
