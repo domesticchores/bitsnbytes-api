@@ -310,10 +310,10 @@ def add_nfc_data():
         return nfc.as_dict(), 200
     except ValueError as value_err:
         print(f"VALUE ERROR: {value_err}")
-        return str(value_err), 400
+        return str(value_err), "400 VALUE ERROR"
     except IntegrityError as int_err:
         print(f"INTEGRITY ERROR, SOMETHING ALREADY EXISTS: {int_err}")
-        return str(int_err), 400
+        return str(int_err), "400 NFC ID ALREADY EXISTS"
 
 """
 Get NFC by ID
