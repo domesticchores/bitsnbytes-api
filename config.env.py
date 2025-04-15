@@ -19,4 +19,6 @@ EXTRA_KEY = os.getenv("EXTRA_KEY", default="")
 IP = os.getenv("IP", default="")
 PORT = os.getenv("PORT", default="")
 
+BNB_WEBSITE = os.getenv("BNB_WEBSITE", default="bitsnbytes.cs.house")
+
 DEBUG = os.getenv("DEBUG", default=False)

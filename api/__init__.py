@@ -1,22 +1,27 @@
-from flask import Flask, request, abort
+from flask import Flask, jsonify, request, abort
 import os
 import logging
 import json
 import api.util
 import api.s3
 from functools import wraps
-from api.models.item import Item
-from api.models.user import User
+from api.models.model import NFC, User
+from api.models.item import Item, NutritionFact
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from sqlalchemy import select
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 import json
+from flask_cors import CORS, cross_origin
 #from flasgger import Swagger
 
 #swagger = Swagger(app)
 
 app = Flask(__name__)
+# set CORS options
+CORS(app)
+app.config['CORS_HEADERS'] = 'Content-Type'
     
 if os.path.exists(os.path.join(os.getcwd(), "config.py")):
     app.config.from_pyfile(os.path.join(os.getcwd(), "config.py"))
@@ -36,6 +41,8 @@ migrate = Migrate(app, db)
 
 with app.app_context():
     db.create_all()
+
+print("WEBSITE: ", app.config["BNB_WEBSITE"])
 
 # Commit
 #commit = check_output(['git', 'rev-parse', '--short', 'HEAD']).decode('utf-8').rstrip()
@@ -160,35 +167,46 @@ def delete_item(id):
 """
 Get all users
 """
-@app.route('/users/', methods=["GET", "POST"])
+@app.route('/users/', methods=["GET"])
 @auth
 def get_all_users():
     """
     Returns all users as a json obj
     """
-    
-    if request.method == "GET":
-        print("GET Recieved")
-        query = db.session.query(User)
-        users = query.all()
+    print("GET Recieved")
+    query = db.session.query(User)
+    users = query.all()
 
-        return [user.as_dict() for user in users]
-    
-    else:
-        print("POST Recieved")
-        print(request.form)
-        try:
+    return [user.as_dict() for user in users]
+
+"""
+Create a User
+"""
+@app.route('/users/', methods=["POST"])
+@auth
+def add_user(nfc_data = None):
+    """
+    Creates a new user and returns its id
+    """
+    print("POST Recieved")
+    try:
+        if(not nfc_data):
+            print("creating user from request")
             # json_data = json.loads(request.get_json(force=True))
-            form_data = request.form.to_dict()
-            new_user = User(form_data)
-            print(f"DATA: {form_data}")
-            db.session.add(new_user)
-            db.session.commit()
-            print(f"POST SUCCESS: UID {new_user.id}")
-            return str(new_user.id)
-        except ValueError as value_err:
-            print(f"VALUE ERROR: {value_err}")
-            return str(value_err), 400
+            form_data = request.args.to_dict()
+            print("DATA: ", request.form)
+        else:
+            print("creating user from nfc data")
+            form_data = nfc_data
+        new_user = User(form_data)
+        print(f"DATA: {form_data}")
+        db.session.add(new_user)
+        db.session.commit()
+        print(f"POST SUCCESS: UID {new_user.id}")
+        return str(new_user.id)
+    except ValueError as value_err:
+        print(f"VALUE ERROR: {value_err}")
+        return str(value_err), 400
 
 """
 Get User by Token
@@ -218,7 +236,8 @@ def get_user_by_id(id):
         in: path
         type: int
         required: true
-    ```"""
+    ```
+    """
 
     user = db.get_or_404(User, id)
 
@@ -240,4 +259,78 @@ def delete_user(id):
     db.session.delete(user)
     db.session.commit()
 
-    return ""
+    return id
+
+"""
+Gets NFC data
+"""
+@app.route('/nfc/', methods=["GET"])
+@auth
+def get_all_nfc_data():
+    query = db.session.query(NFC)
+    nfcs = query.all()
+
+    return [nfc.as_dict() for nfc in nfcs]
+
+"""
+Adds NFC data
+"""
+@app.route('/nfc/', methods=["POST"])
+@cross_origin(origins=[app.config["BNB_WEBSITE"]])
+@auth
+def add_nfc_data():
+    try:
+        data = request.args.to_dict()
+        print(f"DATA: {data}")
+        # first, check if there is already a user with the associated phone or email:
+        user = db.session.query(User).filter(User.email == data["email"]).first()
+        # if no user, then create one using the data given.
+        userID = -1
+        if (user == None):
+             print("NO USER FOUND WITH EMAIL OR PHONE. CREATING.")
+             data["balance"] = 10.00 # change this for amount to give each new user
+             data["thumb_img"] = ''
+             newID = add_user(nfc_data=data)
+             userID = int(newID)
+        else:
+            print(f"USER DATA: {user.as_dict()}")
+            userID = user.id
+        print("USER ID: ", userID)
+        
+        nfc_data = {
+            "id":data["nfc-token"],
+            "assigned_user":userID,
+            "type":"MIFARE"
+        }
+        
+        nfc = NFC(nfc_data)       
+        db.session.add(nfc)
+        db.session.commit()
+        print(f"POST SUCCESS")
+        return jsonify(nfc.as_dict(), 200)
+    except ValueError as value_err:
+        print(f"VALUE ERROR: {value_err}")
+        return jsonify(str(value_err), 400)
+    except IntegrityError as int_err:
+        print(f"INTEGRITY ERROR, SOMETHING ALREADY EXISTS: {int_err}")
+        return jsonify(str(int_err), 400)
+
+"""
+Get NFC by ID
+"""
+@app.route('/nfc/<id>', methods=["GET"])
+@auth
+def get_nfc_by_id(id):
+    """
+    Returns NFC Object by ID
+    ```
+    parameters:
+    - name: id
+        in: path
+        type: int
+        required: true
+    ```
+    """
+
+    nfc = db.get_or_404(NFC, id)
+    return nfc.as_dict()

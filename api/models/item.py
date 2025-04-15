@@ -2,8 +2,9 @@ import hashlib
 import api.s3
 import api.img
 import json
-from sqlalchemy import Column, Integer, String, Float, Boolean
+from sqlalchemy import Column, ForeignKey, Integer, String, Float, Boolean
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import relationship
 
 Base = declarative_base()
 
@@ -19,6 +20,7 @@ class Item(Base):
     upc = Column(String, default='0000000000')
     quantity = Column(Integer, default=0)
     price = Column(Float, default=0.0)
+    nutrition_data = relationship("NutritionFact")
     
     def __init__(self, form_data):
         self.name = form_data['name']
@@ -60,3 +62,27 @@ class Item(Base):
 
         with Image.open(file) as im:
             im = img.crop_center
+
+class NutritionFact(Base):
+    __tablename__ = 'nutrition_data'
+
+    id = Column(Integer, primary_key=True)
+    item_id = Column(Integer, ForeignKey('items.id'))
+    nutrient_name = Column(String, default='')
+    value = Column(Float, default=0.00)
+    unit = Column(String, default='')
+    users = relationship("Item", back_populates="items")
+    
+    def __init__(self, form_data):
+        self.id = form_data['id']
+        if len(self.id) is None:
+            raise ValueError("Warning: Missing NFC ID")
+        self.assigned_user = form_data['assigned_user']
+        if self.assigned_user is None:
+            raise ValueError("Warning: Missing UID")
+        self.type = form_data['type']
+        if len(self.type) == 0:
+            self.type = "MIFARE"
+
+    def as_dict(self):
+       return {c.id: getattr(self, c.id) for c in self.__table__.columns}
