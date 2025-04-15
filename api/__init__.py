@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request, abort
+from flask import Flask, jsonify, request, abort, Response
 import os
 import logging
 import json
@@ -307,13 +307,13 @@ def add_nfc_data():
         db.session.add(nfc)
         db.session.commit()
         print(f"POST SUCCESS")
-        return jsonify(nfc.as_dict(), 200)
+        return nfc.as_dict(), 200
     except ValueError as value_err:
         print(f"VALUE ERROR: {value_err}")
-        return jsonify(str(value_err), 400)
+        return str(value_err), 400
     except IntegrityError as int_err:
         print(f"INTEGRITY ERROR, SOMETHING ALREADY EXISTS: {int_err}")
-        return jsonify(str(int_err), 400)
+        return str(int_err), 400
 
 """
 Get NFC by ID
@@ -333,4 +333,4 @@ def get_nfc_by_id(id):
     """
 
     nfc = db.get_or_404(NFC, id)
-    return nfc.as_dict()
+    return nfc.as_dict(), 200
