@@ -76,13 +76,19 @@ class NutritionFact(Base):
     def __init__(self, form_data):
         self.id = form_data['id']
         if len(self.id) is None:
-            raise ValueError("Warning: Missing NFC ID")
-        self.assigned_user = form_data['assigned_user']
-        if self.assigned_user is None:
-            raise ValueError("Warning: Missing UID")
-        self.type = form_data['type']
-        if len(self.type) == 0:
-            self.type = "MIFARE"
+            raise ValueError("Warning: Missing ID")
+        self.item_id = form_data['item_id']
+        if self.item_id is None:
+            raise ValueError("Warning: Missing Item ID")
+        self.nutrient_name = form_data['nutrient_name']
+        if len(self.nutrient_name) == 0:
+            self.nutrient_name = ""
+        self.value = form_data['value']
+        if len(self.value) == None:
+            self.value = 0.00
+        self.unit = form_data['unit']
+        if len(self.nutrient_name) == 0:
+            self.nutrient_name = ""
 
     def as_dict(self):
-       return {c.id: getattr(self, c.id) for c in self.__table__.columns}
+       return {c.name: getattr(self, c.name) for c in self.__table__.columns}

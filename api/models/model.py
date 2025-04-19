@@ -44,7 +44,7 @@ class NFC(Base):
     
     def __init__(self, form_data):
         self.id = form_data['id']
-        if len(self.id) is None:
+        if len(self.id) == 0:
             raise ValueError("Warning: Missing NFC ID")
         self.assigned_user = form_data['assigned_user']
         if self.assigned_user is None:

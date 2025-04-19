@@ -7,6 +7,7 @@ import api.s3
 from functools import wraps
 from api.models.model import NFC, User
 from api.models.item import Item, NutritionFact
+from api.models.shelf import Interaction, Vision, Weight
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from sqlalchemy import select
@@ -261,6 +262,9 @@ def delete_user(id):
 
     return id
 
+# NFC
+########################
+
 """
 Gets NFC data
 """
@@ -334,3 +338,106 @@ def get_nfc_by_id(id):
 
     nfc = db.get_or_404(NFC, id)
     return nfc.as_dict(), 200
+
+# Shelf Data
+########################
+
+# Interactions
+########################
+"""
+Adds interactions to the database
+"""
+@app.route('/add_interactions', methods=["POST"])
+@auth
+def add_interactions():
+    """
+    Adds multiple interactions, from json body
+    """
+    print("POST Recieved")
+    try:
+        print("creating interactions from json")
+        json_data = request.get_json(force=True)
+        print("DATA: ", json_data)
+        return_arr = list()
+        for inter_json in json_data:
+            interaction = Interaction(inter_json)
+            db.session.add(interaction)
+            db.session.commit()
+            return_arr.append(str(interaction.time))
+        return f"{len(return_arr)}", 200
+    except ValueError as value_err:
+        print(f"VALUE ERROR: {value_err}")
+        return str(value_err), 400
+
+# Vision
+########################
+"""
+Adds vison data to the database
+"""
+@app.route('/add_visions', methods=["POST"])
+@auth
+def add_visions():
+    """
+    Adds multiple vision entries, from json body
+    """
+    print("POST Recieved")
+    try:
+        print("creating vision entries from json")
+        json_data = request.get_json(force=True)
+        print("DATA: ", json_data)
+        return_arr = list()
+        for inter_json in json_data:
+            vision = Vision(inter_json)
+            db.session.add(vision)
+            db.session.commit()
+            return_arr.append(str(vision.time))
+        return f"{len(return_arr)}", 200
+    except ValueError as value_err:
+        print(f"VALUE ERROR: {value_err}")
+        return str(value_err), 400
+
+# Weight
+########################
+"""
+Adds weight entries to the database
+"""
+@app.route('/add_weights', methods=["POST"])
+@auth
+def add_weights():
+    """
+    Adds multiple weight entries, from json body
+    """
+    print("POST Recieved")
+    try:
+        print("creating weights from json")
+        json_data = request.get_json(force=True)
+        print("DATA: ", json_data)
+        return_arr = list()
+        for inter_json in json_data:
+            weight = Weight(inter_json)
+            db.session.add(weight)
+            db.session.commit()
+            return_arr.append(str(weight.time))
+        return f"{len(return_arr)}", 200
+    except ValueError as value_err:
+        print(f"VALUE ERROR: {value_err}")
+        return str(value_err), 400
+
+"""
+Get vision and weight data based on timestamp
+"""
+@app.route('/training/<range>', methods=["GET"])
+@auth
+def get_training_data(range):
+    start, end = range.split("~")
+    query = db.session.query(Vision).filter(Vision.time.between(start, end))
+    if query.count() == 0:
+        return "NO RECORDS FOUND FOR VISION DATA", 404
+    vision_data = [vision.as_string_dict() for vision in query.all()]
+
+    query = db.session.query(Weight).filter(Weight.time.between(start, end))
+    if query.count() == 0:
+        return "NO RECORDS FOUND FOR WEIGHT DATA", 404
+    weight_data = [weight.as_string_dict() for weight in query.all()]
+
+    return json.dumps({"vision":vision_data,"weight":weight_data})
