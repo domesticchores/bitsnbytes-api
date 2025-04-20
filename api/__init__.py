@@ -1,3 +1,4 @@
+import datetime
 from flask import Flask, jsonify, request, abort, Response
 import os
 import logging
@@ -430,6 +431,13 @@ Get vision and weight data based on timestamp
 @auth
 def get_training_data(range):
     start, end = range.split("~")
+
+    try:
+        datetime.datetime.strptime(start, "%Y-%m-%d %H:%M:%S.%f")
+        datetime.datetime.strptime(end, "%Y-%m-%d %H:%M:%S.%f")
+    except ValueError:
+        return "BAD PARAMETERS", 400
+    
     query = db.session.query(Vision).filter(Vision.time.between(start, end))
     if query.count() == 0:
         return "NO RECORDS FOUND FOR VISION DATA", 404
