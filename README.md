@@ -122,6 +122,6 @@ On success, the data is returned as a JSON array with two sections, `vision` and
 }
 ```
 
-If no entries exist for either vision or weight, then the API returns a `404 NOT FOUND` with the status text of `NO RECORDS FOUND FOR {TYPE} DATA`.
+If no entries exist for either vision or weight, then the API returns a `404 NOT FOUND` with the status text of `NO RECORDS FOUND FOR {WEIGHT | VISION} DATA`.
 
 If bad timestamps were used, then the API returns a `400 BAD REQUEST` with the status text of `BAD PARAMETERS`.
