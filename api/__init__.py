@@ -281,7 +281,7 @@ def get_all_nfc_data():
 Adds NFC data
 """
 @app.route('/nfc/', methods=["POST"])
-@cross_origin(origins=[app.config["BNB_WEBSITE"]])
+@cross_origin(origins="*")
 @auth
 def add_nfc_data():
     try:
