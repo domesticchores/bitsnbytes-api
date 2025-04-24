@@ -44,8 +44,6 @@ migrate = Migrate(app, db)
 with app.app_context():
     db.create_all()
 
-print("WEBSITE: ", app.config["BNB_WEBSITE"])
-
 # Commit
 #commit = check_output(['git', 'rev-parse', '--short', 'HEAD']).decode('utf-8').rstrip()
 
@@ -103,7 +101,7 @@ def auth(f):
 """
 Get all items
 """
-@app.route('/items', methods=["GET", "POST"])
+@app.route('/get_items', methods=["GET"])
 @auth
 def get_all_items():
     """
@@ -115,15 +113,20 @@ def get_all_items():
         items = query.all()
 
         return [item.as_dict() for item in items]
-    
-    else:
-        try:
-            new_item = Item(request.get_json())
-            db.session.add(new_item)
-            db.session.commit()
-            return str(new_item.id)
-        except ValueError as value_err:
-            return str(value_err), 400
+
+"""
+Add Item
+"""
+@app.route('/add_item', methods=["POST"])
+@auth
+def add_item():
+    try:
+        new_item = Item(request.get_json())
+        db.session.add(new_item)
+        db.session.commit()
+        return str(new_item.id)
+    except ValueError as value_err:
+        return str(value_err), 400
 
 """
 Get Item by ID
@@ -288,7 +291,7 @@ def add_nfc_data():
         data = request.args.to_dict()
         print(f"DATA: {data}")
         # first, check if there is already a user with the associated phone or email:
-        user = db.session.query(User).filter(User.email == data["email"]).first()
+        user = db.session.query(User).filter(User.email == data["email"]).first() | db.session.query(User).filter(User.email == data["phone"]).first() | None
         # if no user, then create one using the data given.
         userID = -1
         if (user == None):

@@ -71,7 +71,6 @@ class NutritionFact(Base):
     nutrient_name = Column(String, default='')
     value = Column(Float, default=0.00)
     unit = Column(String, default='')
-    users = relationship("Item", back_populates="items")
     
     def __init__(self, form_data):
         self.id = form_data['id']
