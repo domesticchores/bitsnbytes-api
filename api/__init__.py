@@ -291,7 +291,7 @@ def add_nfc_data():
         data = request.args.to_dict()
         print(f"DATA: {data}")
         # first, check if there is already a user with the associated phone or email:
-        user = db.session.query(User).filter(User.email == data["email"]).first() | db.session.query(User).filter(User.email == data["phone"]).first() | None
+        user = db.session.query(User).filter(User.email == data["email"]).first() or db.session.query(User).filter(User.email == data["phone"]).first() or None
         # if no user, then create one using the data given.
         userID = -1
         if (user == None):
