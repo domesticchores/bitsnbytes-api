@@ -73,9 +73,6 @@ class NutritionFact(Base):
     unit = Column(String, default='')
     
     def __init__(self, form_data):
-        self.id = form_data['id']
-        if len(self.id) is None:
-            raise ValueError("Warning: Missing ID")
         self.item_id = form_data['item_id']
         if self.item_id is None:
             raise ValueError("Warning: Missing Item ID")
@@ -83,7 +80,7 @@ class NutritionFact(Base):
         if len(self.nutrient_name) == 0:
             self.nutrient_name = ""
         self.value = form_data['value']
-        if len(self.value) == None:
+        if self.value == None:
             self.value = 0.00
         self.unit = form_data['unit']
         if len(self.nutrient_name) == 0:
