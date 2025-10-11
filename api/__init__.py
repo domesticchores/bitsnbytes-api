@@ -452,3 +452,74 @@ def get_training_data(range):
     weight_data = [weight.as_string_dict() for weight in query.all()]
 
     return json.dumps({"vision":vision_data,"weight":weight_data})
+
+### Nutrition Functions
+
+# app.route: has the end point(/print) where you connect to server (https://localhost/print)
+# the methods are the types of REST commands that are allowed, (GET, POST, PUT, DELETE)
+
+
+@app.route('/print', methods=["GET"])
+# auth is added to ensure that only authenticated api are allowed
+@auth
+# a regular python function decleration
+def print_something():
+    # query is a specific request to database
+    # in this case we are gettin everthing from the NutritionFact table, so we use db.session.query()
+    query = db.session.query(NutritionFact)
+    # this query gets requested using three methods: one(), one_or_more(), or all()
+    value = query.one_or_none()
+    # Every api call must return a message and a code, 200 is the standard success code
+    # It has to be sent for the reciver to not error
+    return str(value), 200
+
+@app.route('/add_nutrition', methods=["POST"])
+@auth
+def add_nutrition():
+    # when getting data from a client it is sent through with the request variable.
+    # to get the data in a readable format, use request.get_json()
+    json_data = request.get_json()
+    
+    nutrient_name = json_data["nutrient_name"]
+    value = json_data["value"]
+    unit = json_data["unit"]
+    item_id = json_data["item_id"]
+    # we need to convert the data into a database class, so we pass it into a nutrtionFact object.
+
+    nutrition_fact = NutritionFact(json_data)
+    
+    # once converted into a db object, we can add it into the database with db.session.add()
+    db.session.add(nutrition_fact)
+    # to save our changes, run db.session.commit()
+    db.session.commit()
+
+
+    return "OK", 200
+# if you have a variable in the url call, you can get it by using the <> brackets. 
+@app.route('/edit_nutrition/<id>', methods=["PUT"])
+@auth
+# the arrow bracket variable needs to be passed in as a parameter to the function.
+def edit_nutrition(id):
+    # to get a specific object from the database table use db.get_or_404()
+    # if the object exists the function will continue, otherwise it will send a 404 not found error. 
+    nutrition_fact = db.get_or_404(NutritionFact, id)
+    
+    json_data = request.get_json()
+    # very complex code that just reassigns things. 
+    for key in json_data:
+        if hasattr(nutrition_fact, key) and getattr(nutrition_fact,key) != json_data[key]:
+            setattr(nutrition_fact, key, json_data[key])
+    db.session.commit()
+    request.args
+    return id, 200
+
+@app.route('/delete_nutrition/<id>', methods=["DELETE"])
+@auth
+def delete_nutrition(id):
+    nutrition_fact = db.get_or_404(NutritionFact, id)
+    
+    # to delete something from the database, use db.session.delete(). make sure to commit after. 
+    db.session.delete(nutrition_fact)
+    db.session.commit()
+    
+    return id, 200
