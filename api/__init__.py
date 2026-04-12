@@ -1,8 +1,10 @@
 import datetime
+import boto3
 from flask import Flask, jsonify, request, abort, Response
 import os
 import logging
 import json
+from api.models.imager import ModelImage, ModelAnnotation, ModelSubmission
 import api.util
 import api.s3
 from functools import wraps
@@ -11,11 +13,12 @@ from api.models.item import Item, NutritionFact
 from api.models.shelf import Interaction, Vision, Weight
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
-from sqlalchemy import select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 import json
 from flask_cors import CORS, cross_origin
+
 #from flasgger import Swagger
 
 #swagger = Swagger(app)
@@ -452,3 +455,133 @@ def get_training_data(range):
     weight_data = [weight.as_string_dict() for weight in query.all()]
 
     return json.dumps({"vision":vision_data,"weight":weight_data})
+
+# S3
+########################
+
+@app.route('/print', methods=["GET"])
+@auth
+def print_something():
+    request = db.session.query(NutritionFact)
+    value = request.one_or_none()
+    return str(value), 200
+
+
+# Initialize S3 Client
+s3 = boto3.client('s3',
+                  endpoint_url=app.config['S3_URL'],
+                  aws_access_key_id=app.config['S3_KEY'],
+                  aws_secret_access_key=app.config['S3_SECRET'],
+                  region_name='us-east-1')
+
+@app.route('/imager/get-task', methods=['GET'])
+@auth
+def get_task():
+    uuid = request.args.get('uuid')
+    if uuid != None:
+        task = db.session.query(ModelImage).filter(
+            ModelImage.status == 'pending',ModelImage.assigned_to == uuid).first()
+    else:
+        return jsonify({"message": "Missing UUID!"}), 400
+    
+    # if nothing assigned, check for unassigned
+    if not task:
+        task = db.session.query(ModelImage).filter(
+            ModelImage.status == 'pending',ModelImage.assigned_to.is_(None)).order_by(func.random()).first()
+    
+    # if theres nothing by this point, we have no images left
+    if not task:
+        return jsonify({"message": "All images labeled!"}), 404
+
+    # generate link to image that expires in 15 mins
+    secure_url = s3.generate_presigned_url(
+        'get_object',
+        Params={'Bucket': app.config['BUCKET_NAME'], 'Key': task.filename},
+        ExpiresIn=900
+    )
+
+    # assign image to user so they can come back to it
+    task.assigned_to = uuid
+    db.session.commit()
+
+    return jsonify({
+        "id": str(task.id),
+        "url": secure_url,
+        "filename": task.filename
+    })
+
+@app.route('/imager/submit', methods=['POST'])
+@auth
+def handle_submission():
+    data = request.json
+    
+    try:
+        for entry in data:
+            task = db.session.query(ModelImage).filter(ModelImage.id == entry['imageId']).one_or_none()
+            print("task",task)
+            if task:
+                print(f"submitted task {entry['imageId']} and changed status")
+                task.status = 'submitted'
+                if task.assigned_to == None:
+                    task.assigned_to = entry['userId']
+
+            # add the submission
+            submission = ModelSubmission(
+                image_id=entry['imageId'],
+                user_id=entry['userId'],
+                submitted_at=entry['submittedAt']
+            )
+            print(submission)
+            db.session.add(submission)
+
+            # add each bounding box to table
+            for box in entry['boxes']:
+                new_box = ModelAnnotation(
+                    id=box['id'],
+                    image_id=entry['imageId'],
+                    class_id=box['classId'],
+                    x=box['x'],
+                    y=box['y'],
+                    width=box['width'],
+                    height=box['height']
+                )
+                db.session.add(new_box)
+
+        db.session.commit()
+        return jsonify({"status": "success"}), 201
+
+    except Exception as e:
+        print(e)
+        # rollback on crash
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+### Submit
+
+@app.route('/imager/trash', methods=['POST'])
+@auth
+def trash_image():
+    data = request.json
+    print("got data")
+    print(data)
+    task = db.session.query(ModelImage).filter(ModelImage.id == data['imageId']).one_or_none()
+    if task:
+        task.status = "trashed"
+        db.session.commit()
+        print(f"trashed image {data['imageId']} by {data['userId']}")
+    return jsonify({"status": "success"}), 201
+
+### Get Random Image 
+
+@app.route('/imager/get-pool', methods=["GET"])
+@auth
+def get_image_pool():
+    """
+    Returns all images that have not not been submitted
+    """
+    
+    if request.method == "GET":
+        query = db.session.query(ModelImage).filter(ModelImage.assigned_to == None)
+        images = query.all()
+
+        return [image.as_dict() for image in images]
