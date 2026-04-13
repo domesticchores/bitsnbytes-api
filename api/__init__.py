@@ -578,6 +578,33 @@ def get_image_pool():
 
         return [image.as_dict() for image in images]
 
+# get submissions for each user
+
+@app.route('/imager/leaderboard', methods=["GET"])
+@auth
+def get_leaderboard():
+    today = datetime.datetime.now(tz=datetime.timezone.utc)
+    days_since_sunday = (today.weekday() + 1) % 7
+    last_sunday = (today - datetime.timedelta(days=days_since_sunday)).replace(hour=0, minute=0, second=0, microsecond=0)
+    
+    results = db.session.query(
+        ModelSubmission.user_id, 
+        func.count(ModelSubmission.user_id).label('submissions')
+    ).filter(ModelSubmission.submitted_at >= last_sunday)\
+     .group_by(ModelSubmission.user_id)\
+     .order_by(func.count(ModelSubmission.user_id).desc())\
+     .all()
+
+    # 2. Convert the list of tuples into a list of dictionaries
+    leaderboard = [
+        {"userId": row.user_id, "submissions": row.submissions} 
+        for row in results
+    ]
+    print(leaderboard)
+    return leaderboard
+
+
+
 ### Nutrition Functions
 
 # app.route: has the end point(/print) where you connect to server (https://localhost/print)
