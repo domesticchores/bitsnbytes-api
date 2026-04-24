@@ -502,6 +502,8 @@ def get_task():
         "filename": task.filename
     })
 
+# Submit Annotations
+
 @app.route('/imager/submit', methods=['POST'])
 @auth
 def handle_submission():
@@ -548,7 +550,54 @@ def handle_submission():
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
 
-### Submit
+
+# Update previously submitted Annotation
+
+@app.route('/imager/update', methods=['POST'])
+@auth
+def update_submission():
+    data = request.json
+    
+    try:
+        for entry in data:
+            task = db.session.query(ModelImage).filter(ModelImage.id == entry['imageId']).one_or_none()
+            print("task",task)
+            if task:
+                print(f"updating task {entry['imageId']} and changed status")
+
+            # get all previous bounding boxes
+            prev_boxes = db.session.query(ModelAnnotation).filter_by(image_id=entry['imageId']).all()
+            # remove each box
+            for box in prev_boxes:
+                print(f'removing box with id of {box.id}')
+                db.session.delete(box)
+            
+            #commit these changes
+            db.session.commit()
+
+            # add each new bounding box to table
+            for box in entry['boxes']:
+                new_box = ModelAnnotation(
+                    id=box['id'],
+                    image_id=entry['imageId'],
+                    class_id=box['classId'],
+                    x=box['x'],
+                    y=box['y'],
+                    width=box['width'],
+                    height=box['height']
+                )
+                db.session.add(new_box)
+
+        db.session.commit()
+        return jsonify({"status": "success"}), 201
+
+    except Exception as e:
+        print(e)
+        # rollback on crash
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+### Trash Annotation
 
 @app.route('/imager/trash', methods=['POST'])
 @auth
@@ -603,7 +652,80 @@ def get_leaderboard():
     print(leaderboard)
     return leaderboard
 
+# get a submission to review
 
+@app.route('/imager/get-submission', methods=['GET'])
+@auth
+def get_review_submission():
+    task = db.session.query(ModelImage).filter_by(status='submitted').first()
+    
+    if not task:
+        return jsonify(None), 200
+
+    annotations = db.session.query(ModelAnnotation).filter_by(image_id=task.id).all()
+    boxes = [{
+        "id": ann.id,
+        "classId": ann.class_id,
+        "x": ann.x,
+        "y": ann.y,
+        "width": ann.width,
+        "height": ann.height
+    } for ann in annotations]
+
+    # generate link to image that expires in 15 mins
+    secure_url = s3.generate_presigned_url(
+        'get_object',
+        Params={'Bucket': app.config['BUCKET_NAME'], 'Key': task.filename},
+        ExpiresIn=900
+    )
+
+    return jsonify({
+        "id": task.id,
+        "url": secure_url,
+        "filename": task.filename,
+        "boxes": boxes,
+        "submitted_by":task.assigned_to,
+    })
+
+# approve a submission
+
+@app.route('/imager/approve/<imageId>', methods=['POST'])
+@auth
+def approve_image(imageId):
+    image = db.session.query(ModelSubmission).filter_by(image_id=imageId).one()
+    if image:
+        image.is_approved = True
+        task = db.session.query(ModelImage).filter_by(id=imageId).one_or_none()
+        if task:
+            task.status="approved"
+        db.session.commit()
+        return "OK",200
+    else:
+        return "ERROR: Submission not found",404
+    
+# approve a submission
+
+@app.route('/imager/get-upload-link', methods=['POST'])
+@auth
+def add_image():
+    # should recieve url, filename
+    data = request.json
+    
+    # return if missing data
+    if not data['url'] or not data['filename']:
+        return "Bad Params",400
+    image = ModelImage(url=data['url'], filename=data['filename'])
+    try:
+        db.session.add(image)
+        # generate link to post that expires in 15 mins
+        secure_url = s3.generate_presigned_url(
+            'put_object',
+            Params={'Bucket': app.config['BUCKET_NAME'], 'Key': data['filename']},
+            ExpiresIn=900
+        )
+        return jsonify({'url':secure_url})
+    except:
+        return "ERROR COMMITING CHANGES",500
 
 ### Nutrition Functions
 
