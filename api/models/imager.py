@@ -2,10 +2,8 @@ from datetime import datetime, timezone
 import uuid
 
 from sqlalchemy import UUID, Column, DateTime, ForeignKey, Integer, String, Float, Boolean, Text, UniqueConstraint
-from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
-
-Base = declarative_base()
+from api.models.base import Base
 
 class ModelImage(Base):
     __tablename__ = 'model_images'

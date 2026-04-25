@@ -6,9 +6,7 @@ import api.img
 import json
 from sqlalchemy import Column, ForeignKey, Integer, String, Float, Boolean, TIMESTAMP, Double
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.ext.declarative import declarative_base
-
-Base = declarative_base()
+from api.models.base import Base
 
 class Interaction(Base):
     __tablename__ = 'interaction_data'
