@@ -1,9 +1,11 @@
 import datetime
 import hashlib
+import uuid
 import api.s3
 import api.img
 import json
 from sqlalchemy import Column, ForeignKey, Integer, String, Float, Boolean, TIMESTAMP, Double
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.ext.declarative import declarative_base
 
 Base = declarative_base()
@@ -65,7 +67,7 @@ class Weight(Base):
     slot_id = Column(String, nullable=False)
     weight_grams  = Column(Double, nullable=False)
     time = Column(TIMESTAMP, nullable=False, primary_key=True) # not actually primary key, workaround
-    
+
     def __init__(self, form_data):
         self.slot_id = form_data['slot_id']
         if self.slot_id == None:
@@ -84,3 +86,30 @@ class Weight(Base):
         base = self.as_dict()
         base["time"] = datetime.datetime.strftime(base["time"], "%Y-%m-%d %H:%M:%S.%f")
         return base
+
+
+class ShelfContent(Base):
+    __tablename__ = 'shelf_contents'
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    shelf_id = Column(String, nullable=False)
+    slot_id = Column(Integer, nullable=False)
+    item_id = Column(Integer, ForeignKey('items.id'), nullable=False)
+    quantity = Column(Integer, nullable=False, default=1)
+
+    def __init__(self, form_data):
+        self.shelf_id = form_data['shelf_id']
+        if not self.shelf_id:
+            raise ValueError("Missing shelf_id")
+        self.slot_id = form_data['slot_id']
+        if self.slot_id is None:
+            raise ValueError("Missing slot_id")
+        self.item_id = form_data['item_id']
+        if self.item_id is None:
+            raise ValueError("Missing item_id")
+        self.quantity = form_data.get('quantity', 1)
+
+    def as_dict(self):
+        d = {c.name: getattr(self, c.name) for c in self.__table__.columns}
+        d['id'] = str(d['id'])
+        return d

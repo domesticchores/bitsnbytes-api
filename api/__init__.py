@@ -10,7 +10,7 @@ import api.s3
 from functools import wraps
 from api.models.model import NFC, User
 from api.models.item import Item, NutritionFact
-from api.models.shelf import Interaction, Vision, Weight
+from api.models.shelf import Interaction, Vision, Weight, ShelfContent
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from sqlalchemy import func, or_, select
@@ -803,9 +803,103 @@ def edit_nutrition(id):
 @auth
 def delete_nutrition(id):
     nutrition_fact = db.get_or_404(NutritionFact, id)
-    
-    # to delete something from the database, use db.session.delete(). make sure to commit after. 
+
+    # to delete something from the database, use db.session.delete(). make sure to commit after.
     db.session.delete(nutrition_fact)
     db.session.commit()
-    
+
     return id, 200
+
+# Shelf Contents
+########################
+
+"""
+Get all items on a shelf, grouped by slot.
+Returns: [ { slot_id, items: [ { ...item fields..., shelf_content_id, quantity } ] } ]
+"""
+@app.route('/shelf/<shelf_id>', methods=["GET"])
+@auth
+def get_shelf_contents(shelf_id):
+    rows = db.session.query(ShelfContent, Item)\
+        .join(Item, ShelfContent.item_id == Item.id)\
+        .filter(ShelfContent.shelf_id == shelf_id)\
+        .order_by(ShelfContent.slot_id)\
+        .all()
+
+    slots = {}
+    for content, item in rows:
+        slot = content.slot_id
+        if slot not in slots:
+            slots[slot] = []
+        item_data = item.as_dict()
+        item_data['shelf_content_id'] = str(content.id)
+        item_data['quantity'] = content.quantity
+        slots[slot].append(item_data)
+
+    return jsonify([{"slot_id": slot, "items": items} for slot, items in slots.items()])
+
+"""
+Add an item to a slot on a shelf.
+Body: { item_id, quantity (optional, default 1) }
+"""
+@app.route('/shelf/<shelf_id>/slot/<int:slot_id>', methods=["POST"])
+@auth
+def add_item_to_shelf(shelf_id, slot_id):
+    data = request.get_json()
+    try:
+        content = ShelfContent({
+            'shelf_id': shelf_id,
+            'slot_id': slot_id,
+            'item_id': data['item_id'],
+            'quantity': data.get('quantity', 1),
+        })
+        db.session.add(content)
+        db.session.commit()
+        return jsonify(content.as_dict()), 201
+    except ValueError as e:
+        return str(e), 400
+
+"""
+Update item quantity on a slot of a shelf.
+Body: { item_id, quantity }
+"""
+@app.route('/shelf/<shelf_id>/slot/<int:slot_id>', methods=["PUT"])
+@auth
+def update_shelf_slot(shelf_id, slot_id):
+    data = request.get_json()
+    item_id = data.get('item_id')
+    quantity = data.get('quantity')
+    if item_id is None or quantity is None:
+        return "Missing item_id or quantity", 400
+
+    content = db.session.query(ShelfContent)\
+        .filter_by(shelf_id=shelf_id, slot_id=slot_id, item_id=item_id)\
+        .one_or_none()
+    if not content:
+        return "Not found", 404
+
+    content.quantity = quantity
+    db.session.commit()
+    return jsonify(content.as_dict()), 200
+
+"""
+Remove an item from a slot on a shelf.
+Body: { item_id }
+"""
+@app.route('/shelf/<shelf_id>/slot/<int:slot_id>', methods=["DELETE"])
+@auth
+def remove_item_from_shelf(shelf_id, slot_id):
+    data = request.get_json()
+    item_id = data.get('item_id') if data else None
+    if item_id is None:
+        return "Missing item_id", 400
+
+    content = db.session.query(ShelfContent)\
+        .filter_by(shelf_id=shelf_id, slot_id=slot_id, item_id=item_id)\
+        .one_or_none()
+    if not content:
+        return "Not found", 404
+
+    db.session.delete(content)
+    db.session.commit()
+    return "", 204
