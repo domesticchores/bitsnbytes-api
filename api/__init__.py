@@ -814,6 +814,39 @@ def delete_nutrition(id):
 ########################
 
 """
+Get all shelves, their slots, and the items in each slot.
+Returns: [ { shelf_id, slots: [ { slot_id, items: [ { ...item fields..., shelf_content_id, quantity } ] } ] } ]
+"""
+@app.route('/shelves', methods=["GET"])
+@auth
+def get_all_shelves():
+    rows = db.session.query(ShelfContent, Item)\
+        .join(Item, ShelfContent.item_id == Item.id)\
+        .order_by(ShelfContent.shelf_id, ShelfContent.slot_id)\
+        .all()
+
+    shelves = {}
+    for content, item in rows:
+        shelf = content.shelf_id
+        slot = content.slot_id
+        if shelf not in shelves:
+            shelves[shelf] = {}
+        if slot not in shelves[shelf]:
+            shelves[shelf][slot] = []
+        item_data = item.as_dict()
+        item_data['shelf_content_id'] = str(content.id)
+        item_data['quantity'] = content.quantity
+        shelves[shelf][slot].append(item_data)
+
+    return jsonify([
+        {
+            "shelf_id": shelf_id,
+            "slots": [{"slot_id": slot_id, "items": items} for slot_id, items in slots.items()]
+        }
+        for shelf_id, slots in shelves.items()
+    ])
+
+"""
 Get all items on a shelf, grouped by slot.
 Returns: [ { slot_id, items: [ { ...item fields..., shelf_content_id, quantity } ] } ]
 """

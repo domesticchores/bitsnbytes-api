@@ -3,10 +3,8 @@ import api.s3
 import api.img
 import json
 from sqlalchemy import Column, ForeignKey, Integer, String, Float, Boolean
-from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
-
-Base = declarative_base()
+from api.models.base import Base
 
 class Item(Base):
     __tablename__ = 'items'  # Name of the database table
