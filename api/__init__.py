@@ -728,7 +728,7 @@ def add_image():
             ExtraArgs={"ContentType": imagedata.content_type}
         )
         # make url field for database
-        url = f'{app.config['S3_URL']}/{app.config['BUCKET_NAME']}/{filename}'
+        url = f"{app.config['S3_URL']}/{app.config['BUCKET_NAME']}/{filename}"
         image = ModelImage(url=url, filename=filename)
         # add and commit image entry to database
         db.session.add(image)
