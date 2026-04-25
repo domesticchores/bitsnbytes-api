@@ -703,29 +703,41 @@ def approve_image(imageId):
     else:
         return "ERROR: Submission not found",404
     
-# approve a submission
+# get a link to upload to s3 bucket
 
 @app.route('/imager/get-upload-link', methods=['POST'])
 @auth
 def add_image():
     # should recieve url, filename
-    data = request.json
-    
-    # return if missing data
-    if not data['url'] or not data['filename']:
-        return "Bad Params",400
-    image = ModelImage(url=data['url'], filename=data['filename'])
+    filename = request.form.get('filename')
+    imagedata = request.files['file']
+
+    print(filename, imagedata)
+    if not filename or not imagedata:
+        return "BAD PARAMS", 400
     try:
-        db.session.add(image)
-        # generate link to post that expires in 15 mins
-        secure_url = s3.generate_presigned_url(
-            'put_object',
-            Params={'Bucket': app.config['BUCKET_NAME'], 'Key': data['filename']},
-            ExpiresIn=900
+        # upload the file to the bucket
+        db_image = db.session.query(ModelImage).filter_by(filename=filename).first()
+        # if it already exists, then we need to skip. will succeed in s3, but the db will have duplicates.
+        if db_image:
+            return "Skipping, image already exists!", 409
+        s3.upload_fileobj(
+            imagedata,
+            app.config['BUCKET_NAME'],
+            filename,
+            ExtraArgs={"ContentType": imagedata.content_type}
         )
-        return jsonify({'url':secure_url})
-    except:
-        return "ERROR COMMITING CHANGES",500
+        # make url field for database
+        url = f'{app.config['S3_URL']}/{app.config['BUCKET_NAME']}/{filename}'
+        image = ModelImage(url=url, filename=filename)
+        # add and commit image entry to database
+        db.session.add(image)
+        db.session.commit()
+        return "Upload successful", 200
+    except Exception as e:
+        # rollback
+        db.session.rollback()
+        return {"error": str(e)}, 500
 
 ### Nutrition Functions
 
