@@ -309,7 +309,7 @@ def add_nfc_data():
         print("USER ID: ", userID)
         
         nfc_data = {
-            "id":data["nfc-token"],
+            "id":data["nfc_token"],
             "assigned_user":userID,
             "type":"MIFARE"
         }
