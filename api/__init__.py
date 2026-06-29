@@ -325,6 +325,11 @@ def add_nfc_data():
              print("NO USER FOUND WITH EMAIL OR PHONE. CREATING.")
              data["balance"] = 10.00 # change this for amount to give each new user
              data["thumb_img"] = ''
+
+             # don't disable camera unless specified in packet
+             if 'disable_camera' not in data:
+                 data['disable_camera'] = False
+
              newID = add_user(nfc_data=data)
              userID = int(newID)
         else:
