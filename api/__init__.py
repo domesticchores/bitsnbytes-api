@@ -295,6 +295,11 @@ def add_nfc_data():
         print(f"DATA: {data}")
 
         # Clean email and phone fields if they exist
+        if 'email' not in data:
+            data['email'] = None
+        if 'phone' not in data:
+            data['phone'] = None
+
         if data['email'] is not None and isinstance(data['email'], str):
             data['email'] = data['email'].strip()
         if data['phone'] is not None and isinstance(data['phone'], str):
