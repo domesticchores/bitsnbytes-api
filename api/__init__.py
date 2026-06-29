@@ -293,14 +293,43 @@ def add_nfc_data():
     try:
         data = request.args.to_dict()
         print(f"DATA: {data}")
-        # first, check if there is already a user with the associated phone or email:
-        user = db.session.query(User).filter(User.email == data["email"]).first() or db.session.query(User).filter(User.phone == data["phone"]).first() or None
-        # if no user, then create one using the data given.
-        userID = -1
+
+        # Clean email and phone fields if they exist
+        if data['email'] is not None and isinstance(data['email'], str):
+            data['email'] = data['email'].strip()
+        if data['phone'] is not None and isinstance(data['phone'], str):
+            data['phone'] = data['phone'].strip()
+
+        # Get user with this email from DB if email is valid and user exists
+        if data['email'] is not None and data['email'] != '':
+            existing_email_user = db.session.query(User).filter(User.email == data['email']).first()
+        else:
+            existing_email_user = None
+
+        # Get user with this phone from DB if phone is valid and user exists
+        if data['phone'] is not None and data['phone'] != '':
+            existing_phone_user = db.session.query(User).filter(User.email == data['email']).first()
+        else:
+            existing_phone_user = None
+
+        # Match email first, then phone
+        if existing_email_user is not None:
+            user = existing_email_user
+        elif existing_phone_user is not None:
+            user = existing_phone_user
+        else:
+            user = None
+
+        # Create new user if user wasn't found
         if (user == None):
              print("NO USER FOUND WITH EMAIL OR PHONE. CREATING.")
              data["balance"] = 10.00 # change this for amount to give each new user
              data["thumb_img"] = ''
+
+             # don't disable camera unless specified in packet
+             if 'disable_camera' not in data:
+                 data['disable_camera'] = False
+
              newID = add_user(nfc_data=data)
              userID = int(newID)
         else:
@@ -936,3 +965,5 @@ def remove_item_from_shelf(shelf_id, slot_id):
     db.session.delete(content)
     db.session.commit()
     return "", 204
+
+
