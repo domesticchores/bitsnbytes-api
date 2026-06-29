@@ -313,7 +313,7 @@ def add_nfc_data():
 
         # Get user with this phone from DB if phone is valid and user exists
         if data['phone'] is not None and data['phone'] != '':
-            existing_phone_user = db.session.query(User).filter(User.email == data['email']).first()
+            existing_phone_user = db.session.query(User).filter(User.phone == data['phone]']).first()
         else:
             existing_phone_user = None
 
