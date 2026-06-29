@@ -334,6 +334,9 @@ def add_nfc_data():
              # don't disable camera unless specified in packet
              if 'disable_camera' not in data:
                  data['disable_camera'] = False
+             else:
+                 # Convert from str to boolean ('true' = true, anything else = false).
+                 data['disable_camera'] = data['disable_camera'] == 'true'
 
              newID = add_user(nfc_data=data)
              userID = int(newID)
