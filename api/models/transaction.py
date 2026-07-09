@@ -1,8 +1,4 @@
-import hashlib
-import api.s3
-import api.img
-import json
-from sqlalchemy import Column, ForeignKey, Integer, String, Float, Boolean, DateTime, BigInteger
+from sqlalchemy import Column, ForeignKey, Integer, Boolean, DateTime, BigInteger
 from sqlalchemy.orm import relationship
 from api.models.base import Base
 
@@ -16,8 +12,8 @@ class Transaction(Base):
     sent_email = Column(Boolean)
     transaction_start = Column(DateTime(timezone=True))
     transaction_end = Column(DateTime(timezone=True))
-    reciept_sms_time = Column(BigInteger)
-    reciept_email_time = Column(BigInteger)
+    receipt_sms_time = Column(BigInteger)
+    receipt_email_time = Column(BigInteger)
     recorded_image_data = Column(Boolean)
     canceled = Column(Boolean)
     
@@ -33,7 +29,7 @@ class Transaction(Base):
         self.transaction_start = form_data['transaction_start']
         if self.transaction_start is None:
             return ValueError("Missing transaction_start")
-        self.transaction_end = form_data['user_id']
+        self.transaction_end = form_data['transaction_end']
         if self.transaction_end is None:
             return ValueError("Missing transaction_end")
 
@@ -45,13 +41,13 @@ class Transaction(Base):
         if self.sent_email is None:
             raise ValueError("Missing sent_email")
 
-        self.reciept_sms_time = form_data['reciept_sms_time']
-        if self.reciept_sms_time is None:
-            raise ValueError("missing reciept_sms_time")
+        self.receipt_sms_time = form_data['receipt_sms_time']
+        if self.receipt_sms_time is None:
+            raise ValueError("missing receipt_sms_time")
 
-        self.reciept_email_time = form_data['reciept_email_time']
-        if self.reciept_email_time is None:
-            raise ValueError("Missing reciept_email_time")
+        self.receipt_email_time = form_data['receipt_email_time']
+        if self.receipt_email_time is None:
+            raise ValueError("Missing receipt_email_time")
 
         self.recorded_image_data = form_data['recorded_image_data']
         if self.recorded_image_data is None:

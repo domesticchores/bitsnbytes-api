@@ -11,6 +11,7 @@ from functools import wraps
 from api.models.model import NFC, User
 from api.models.item import Item, NutritionFact
 from api.models.shelf import Interaction, Vision, Weight, ShelfContent
+from api.models.transaction import Transaction, TransactionItem
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from sqlalchemy import func, or_, select
@@ -492,6 +493,39 @@ def get_training_data(range):
     weight_data = [weight.as_string_dict() for weight in query.all()]
 
     return json.dumps({"vision":vision_data,"weight":weight_data})
+
+# Transactions
+########################
+"""
+Add Transaction
+takes in json with transaction: containing relevant fields and items: containing n records for items and quantities
+"""
+@app.route('/add_transaction', methods=["POST"])
+@auth
+def add_transaction():
+    try:
+        print(request.get_json())
+        new_item = Transaction(request.get_json().get("transaction"))
+        db.session.add(new_item)
+        db.session.commit()
+        # use this in creation of transation_items request
+        transaction_id =  str(new_item.id)
+
+        for ti_data in request.get_json().get("items"):
+            item = {
+                "item_id":ti_data.get('item_id'),
+                "transaction_id":transaction_id,
+                "quantity":ti_data.get('quantity'),
+                "created_at":datetime.datetime.now()
+            }
+            new_item = TransactionItem(item)
+            db.session.add(new_item)
+        
+        db.session.commit()
+        return str(transaction_id), 200
+    except ValueError as value_err:
+        return str(value_err), 400
+
 
 # S3
 ########################
