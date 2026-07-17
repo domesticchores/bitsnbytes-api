@@ -1,4 +1,6 @@
 import datetime
+import re
+import struct
 import boto3
 from flask import Flask, jsonify, request, abort, Response
 import os
@@ -11,6 +13,7 @@ from functools import wraps
 from api.models.model import NFC, User
 from api.models.item import Item, NutritionFact
 from api.models.shelf import Interaction, Vision, Weight, ShelfContent
+from api.models.transaction import Transaction, TransactionItem
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from sqlalchemy import func, or_, select
@@ -492,6 +495,73 @@ def get_training_data(range):
     weight_data = [weight.as_string_dict() for weight in query.all()]
 
     return json.dumps({"vision":vision_data,"weight":weight_data})
+
+# Transactions
+########################
+"""
+Add Transaction
+takes in json with transaction: containing relevant fields and items: containing n records for items and quantities
+"""
+@app.route('/add_transaction', methods=["POST"])
+@auth
+def add_transaction():
+    try:
+        print(request.get_json())
+        new_item = Transaction(request.get_json().get("transaction"))
+        db.session.add(new_item)
+        db.session.commit()
+        # use this in creation of transation_items request
+        transaction_id =  str(new_item.id)
+
+        for ti_data in request.get_json().get("items"):
+            item = {
+                "item_id":ti_data.get('item_id'),
+                "transaction_id":transaction_id,
+                "quantity":ti_data.get('quantity'),
+                "created_at":datetime.datetime.now()
+            }
+            new_item = TransactionItem(item)
+            db.session.add(new_item)
+        
+        db.session.commit()
+        return str(transaction_id), 200
+    except ValueError as value_err:
+        return str(value_err), 400
+
+# Receipts
+########################
+"""
+Given token UID, return transactions and some user info.
+"""
+@app.route('/receipt/<UID>', methods=['GET'])
+@auth
+def get_receipt_info(UID):
+    if not re.fullmatch(r'[0-9a-fA-F]+', UID) or len(UID) < 8:
+        return 'Invalid UID', 400
+
+    hex_bytes = bytes.fromhex(UID)
+    decoded = struct.unpack('>I', hex_bytes[0:4])[0]
+
+    nfc = db.get_or_404(NFC, str(decoded))
+    user = db.get_or_404(User, nfc.assigned_user)
+
+    return_dict = dict()
+    return_dict['user'] = {'name':user.name,'img':user.thumb_img}
+
+    transactions_list = []
+    transactions = db.session.query(Transaction).filter(Transaction.user_id == user.id).all()
+    for transaction in transactions:
+        print(transaction.created_at)
+        purchases = db.session.query(TransactionItem).filter(TransactionItem.transaction_id == transaction.id).all()
+        purchase_list = []
+        for purchase in purchases:
+            print(purchase.id)
+            item = db.session.query(Item).filter(Item.id==purchase.item_id).one()
+            purchase_list.append({'item':item.name,'quantity':purchase.quantity,'price':item.price})
+        transactions_list.append({'created_at':transaction.created_at.strftime('%m/%d/%Y %H:%M'),'purchases':purchase_list})
+    return_dict['transactions'] = transactions_list
+
+    return json.dumps(return_dict), 200
 
 # S3
 ########################

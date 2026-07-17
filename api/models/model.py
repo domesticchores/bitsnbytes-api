@@ -11,6 +11,7 @@ class User(Base):
     balance = Column(Float, default=0.00)
     email = Column(String, default="")
     phone = Column(String, default="")
+    recording_enabled = Column(Boolean, default=False)
     nfc_data = relationship("NFC")
     
     def __init__(self, form_data):
@@ -29,6 +30,9 @@ class User(Base):
         self.thumb_img = form_data['thumb_img']
         if len(self.thumb_img) == 0:
             self.thumb_img = 'http://placehold.jp/150x150.png'
+        self.recording_enabled = form_data['recording_enabled']
+        if self.recording_enabled is None:
+            self.recording_enabled = False
 
     def as_dict(self):
        return {c.name: getattr(self, c.name) for c in self.__table__.columns}
