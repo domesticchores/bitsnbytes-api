@@ -1023,6 +1023,51 @@ def update_shelf_slot(shelf_id, slot_id):
     return jsonify(content.as_dict()), 200
 
 """
+Bulk update item quantities across shelves and slots.
+Body: {
+    mac_addr1: {
+        slot_id1: { item_id1: quantity, item_id2: quantity },
+        slot_id2: { item_id1: quantity }
+    },
+    mac_addr2: { ... }
+}
+Creates a ShelfContent row if one doesn't already exist for the
+shelf/slot/item combination, otherwise updates its quantity.
+"""
+@app.route('/shelves/bulk_update', methods=["PUT"])
+@auth
+def bulk_update_shelf_quantities():
+    data = request.get_json()
+    if not data:
+        return "Missing body", 400
+
+    updated = 0
+    try:
+        for shelf_id, slots in data.items():
+            for slot_id, items in slots.items():
+                for item_id, quantity in items.items():
+                    content = db.session.query(ShelfContent)\
+                        .filter_by(shelf_id=shelf_id, slot_id=int(slot_id), item_id=int(item_id))\
+                        .one_or_none()
+                    if content:
+                        content.quantity = quantity
+                    else:
+                        content = ShelfContent({
+                            'shelf_id': shelf_id,
+                            'slot_id': int(slot_id),
+                            'item_id': int(item_id),
+                            'quantity': quantity,
+                        })
+                        db.session.add(content)
+                    updated += 1
+        db.session.commit()
+    except (ValueError, TypeError) as e:
+        db.session.rollback()
+        return str(e), 400
+
+    return jsonify({"updated": updated}), 200
+
+"""
 Remove an item from a slot on a shelf.
 Body: { item_id }
 """
