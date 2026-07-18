@@ -30,7 +30,7 @@ class User(Base):
         self.thumb_img = form_data['thumb_img']
         if len(self.thumb_img) == 0:
             self.thumb_img = 'http://placehold.jp/150x150.png'
-        self.recording_enabled = form_data['recording_enabled']
+        self.recording_enabled = form_data.get('recording_enabled')
         if self.recording_enabled is None:
             self.recording_enabled = False
 
