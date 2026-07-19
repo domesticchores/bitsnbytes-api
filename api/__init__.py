@@ -1032,7 +1032,8 @@ Body: {
     mac_addr2: { ... }
 }
 Creates a ShelfContent row if one doesn't already exist for the
-shelf/slot/item combination, otherwise updates its quantity.
+shelf/slot/item combination, otherwise updates its quantity. A
+quantity of 0 removes the entry instead of setting it to 0.
 """
 @app.route('/shelves/bulk_update', methods=["PUT"])
 @auth
@@ -1049,6 +1050,11 @@ def bulk_update_shelf_quantities():
                     content = db.session.query(ShelfContent)\
                         .filter_by(shelf_id=shelf_id, slot_id=int(slot_id), item_id=int(item_id))\
                         .one_or_none()
+                    if quantity == 0:
+                        if content:
+                            db.session.delete(content)
+                            updated += 1
+                        continue
                     if content:
                         content.quantity = quantity
                     else:
