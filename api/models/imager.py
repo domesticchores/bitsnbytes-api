@@ -46,3 +46,8 @@ class ModelAnnotation(Base):
         center_x = self.x + (self.width / 2)
         center_y = self.y + (self.height / 2)
         return f"{self.class_id} {center_x} {center_y} {self.width} {self.height}"
+
+class ImagerAdmin(Base):
+    __tablename__ = 'model_admins'
+
+    uuid = Column(UUID(as_uuid=True))
