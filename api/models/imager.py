@@ -50,4 +50,4 @@ class ModelAnnotation(Base):
 class ImagerAdmin(Base):
     __tablename__ = 'model_admins'
 
-    uuid = Column(UUID(as_uuid=True))
+    uuid = Column(UUID(as_uuid=True), primary_key=True)
