@@ -782,7 +782,7 @@ Get Admins for Image
 """
 @app.route('/imager/admins', methods=["GET"])
 @auth
-def get_item_by_id(id):
+def get_imager_admin_users():
     """
     Returns all admin users
     ```
