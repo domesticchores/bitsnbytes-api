@@ -794,7 +794,7 @@ def get_imager_admin_users():
         query = db.session.query(ImagerAdmin)
         admins = query.all()
 
-        return [admins.as_dict() for admin in admins]
+        return [admin.uuid for admin in admins]
 
 ### Nutrition Functions
 
