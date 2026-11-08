@@ -6,7 +6,7 @@ from flask import Flask, jsonify, request, abort, Response
 import os
 import logging
 import json
-from api.models.imager import ModelImage, ModelAnnotation, ModelSubmission
+from api.models.imager import ModelImage, ModelAnnotation, ModelSubmission, ImagerAdmin
 import api.util
 import api.s3
 from functools import wraps
@@ -845,6 +845,26 @@ def add_image():
         # rollback
         db.session.rollback()
         return {"error": str(e)}, 500
+
+# get all admin users
+"""
+Get Admins for Image
+"""
+@app.route('/imager/admins', methods=["GET"])
+@auth
+def get_item_by_id(id):
+    """
+    Returns all admin users
+    ```
+    parameters:
+    - none
+    ```"""
+
+    if request.method == "GET":
+        query = db.session.query(ImagerAdmin)
+        admins = query.all()
+
+        return [admins.as_dict() for admin in admins]
 
 ### Nutrition Functions
 
