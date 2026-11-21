@@ -18,7 +18,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, MultipleResultsFound
 import json
 from flask_cors import CORS, cross_origin
 
@@ -1101,18 +1101,29 @@ Body: { item_id }
 @auth
 def remove_item_from_shelf(shelf_id, slot_id):
     data = request.get_json()
+    # if no item id is passed in, wipe the whole shelf
     item_id = data.get('item_id') if data else None
     if item_id is None:
-        return "Missing item_id", 400
+        content = db.session.query(ShelfContent)\
+                .filter_by(shelf_id=shelf_id, slot_id=slot_id)\
+                .all()
+        for item in content:
+                db.session.delete(item)
+    else:
+        try: 
+            content = db.session.query(ShelfContent)\
+                .filter_by(shelf_id=shelf_id, slot_id=slot_id, item_id=item_id)\
+                .one_or_none()
+            if not content:
+                    return "Not found", 404
+            db.session.delete(content)
+        except MultipleResultsFound:
+            content = db.session.query(ShelfContent)\
+                            .filter_by(shelf_id=shelf_id, slot_id=slot_id,item_id=item_id)\
+                            .all()
+            for item in content:
+                    db.session.delete(item)
 
-    content = db.session.query(ShelfContent)\
-        .filter_by(shelf_id=shelf_id, slot_id=slot_id, item_id=item_id)\
-        .one_or_none()
-    if not content:
-        return "Not found", 404
 
-    db.session.delete(content)
     db.session.commit()
-    return "", 204
-
-
+    return "OK", 200
